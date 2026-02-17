@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Reminder App</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png" />
+    <meta name="theme-color" content="#007aff" />
+  </head>
+  <body>
+    <div class="phone-frame">
+      <div class="app-header">
+        <h2>Reminders</h2>
+        <button id="theme-toggle">🌙</button>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="list">List</button>
+        <button class="view-btn" data-view="calendar">Calendar</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="All">All</button>
+        <button class="filter-btn" data-filter="Tugas">Tugas</button>
+        <button class="filter-btn" data-filter="Personal">Personal</button>
+        <button class="filter-btn" data-filter="Acara">Acara</button>
+        <button class="filter-btn" data-filter="Janjian">Janjian</button>
+      </div>
+
+      <div class="add-task">
+        <div class="input-row">
+          <input type="text" id="task-input" placeholder="New reminder..." />
+          <button id="voice-btn" class="voice-btn" title="Input suara">
+            🎤
+          </button>
+        </div>
+        <select id="category-input">
+          <option value="Tugas">Tugas</option>
+          <option value="Personal">Personal</option>
+          <option value="Acara">Acara</option>
+          <option value="Janjian">Janjian</option>
+        </select>
+        <input type="date" id="date-input" />
+        <div class="time-inputs">
+          <input
+            type="number"
+            id="hours-input"
+            placeholder="HH"
+            min="0"
+            max="23"
+          />
+          <input
+            type="number"
+            id="minutes-input"
+            placeholder="MM"
+            min="0"
+            max="59"
+          />
+          <input
+            type="number"
+            id="seconds-input"
+            placeholder="SS"
+            min="0"
+            max="59"
+          />
+        </div>
+        <button id="add-btn">Add</button>
+      </div>
+
+      <!-- List View -->
+      <div id="list-view">
+        <ul id="task-list" class="task-list"></ul>
+      </div>
+
+      <!-- Calendar View (hidden by default) -->
+      <div id="calendar-view" class="calendar-view hidden">
+        <div class="calendar-header">
+          <button id="prev-month">&lt;</button>
+          <span id="current-month"></span>
+          <button id="next-month">&gt;</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid">
+          <!-- Hari-hari diisi oleh JavaScript -->
+        </div>
+        <div class="selected-date-tasks">
+          <h4>Tasks on <span id="selected-date"></span></h4>
+          <ul id="task-list-date"></ul>
+        </div>
+      </div>
+
+      <audio id="delete-sound" preload="auto">
+        <source
+          src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
+          type="audio/wav"
+        />
+      </audio>
+      <audio id="alarm-sound" src="alarm.mp3"></audio>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
