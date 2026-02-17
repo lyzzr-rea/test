@@ -13,7 +13,10 @@
     <div class="phone-frame">
       <div class="app-header">
         <h2>Reminders</h2>
-        <button id="theme-toggle">🌙</button>
+        <div>
+          <button id="stats-btn">📊</button>
+          <button id="theme-toggle">🌙</button>
+        </div>
       </div>
 
       <!-- View Toggle -->
@@ -33,9 +36,7 @@
       <div class="add-task">
         <div class="input-row">
           <input type="text" id="task-input" placeholder="New reminder..." />
-          <button id="voice-btn" class="voice-btn" title="Input suara">
-            🎤
-          </button>
+          <button id="voice-btn" class="voice-btn" title="Input suara">🎤</button>
         </div>
         <select id="category-input">
           <option value="Tugas">Tugas</option>
@@ -88,6 +89,19 @@
         <div class="selected-date-tasks">
           <h4>Tasks on <span id="selected-date"></span></h4>
           <ul id="task-list-date"></ul>
+        </div>
+      </div>
+
+      <!-- Modal Statistik -->
+      <div id="stats-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Statistik & Ringkasan</h3>
+            <button id="close-stats">&times;</button>
+          </div>
+          <div class="modal-body" id="stats-body">
+            <!-- Diisi oleh JavaScript -->
+          </div>
         </div>
       </div>
 
