@@ -28,11 +28,12 @@ body {
   font-weight: 600;
 }
 
-#theme-toggle {
+#theme-toggle, #stats-btn {
   background: none;
   border: none;
   font-size: 18px;
   cursor: pointer;
+  margin-left: 8px;
 }
 
 /* View Toggle */
@@ -90,7 +91,7 @@ body {
   background: #af52de;
 }
 .filter-btn.active[data-filter="All"] {
-  background: #1c1c1e; /* hitam ala iOS */
+  background: #1c1c1e;
   color: white;
 }
 
@@ -106,11 +107,9 @@ body {
   gap: 8px;
   width: 100%;
 }
-
 .input-row input {
   flex: 1;
 }
-
 .voice-btn {
   background: #007aff;
   border: none;
@@ -119,37 +118,21 @@ body {
   font-size: 20px;
   padding: 0 15px;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    transform 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
-
 .voice-btn:hover {
   background: #005fcc;
   transform: scale(1.05);
 }
-
 .voice-btn.listening {
   background: #ff3b30;
   animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
-  }
-}
-
-/* Pastikan input tidak overflow di mobile */
-.input-row input,
-.input-row button {
-  box-sizing: border-box;
+  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
 
 .add-task input,
@@ -158,37 +141,18 @@ body {
   border-radius: 10px;
   border: none;
   font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .time-inputs {
   display: flex;
   gap: 8px;
-}
-
-/* === PERBAIKAN RESPONSIF UNTUK HP === */
-.add-task input,
-.add-task select {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 16px; /* cegah zoom di iOS */
-  padding: 12px;
-}
-
-input[type="date"] {
-  min-height: 48px; /* area sentuh lebih besar */
-}
-
-.time-inputs {
   width: 100%;
 }
-
 .time-inputs input {
   flex: 1;
   min-width: 0;
-}
-
-.time-inputs input {
-  flex: 1;
 }
 
 #add-btn {
@@ -200,7 +164,6 @@ input[type="date"] {
   font-weight: 600;
   cursor: pointer;
 }
-
 #add-btn:hover {
   background: #005fcc;
 }
@@ -222,17 +185,14 @@ input[type="date"] {
   font-size: 14px;
   transition: transform 0.2s ease;
 }
-
 .task-item span {
   display: flex;
   flex-direction: column;
 }
-
 .task-item small {
   color: #888;
   font-size: 12px;
 }
-
 .task-item button {
   background: #ff3b30;
   border: none;
@@ -241,13 +201,11 @@ input[type="date"] {
   border-radius: 8px;
   cursor: pointer;
 }
-
 .task-item.completed strong {
   text-decoration: line-through;
   opacity: 0.6;
 }
 
-/* Badge warna kategori */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -392,9 +350,103 @@ body.dark #task-list-date li {
 .filter-btn:hover,
 #add-btn:hover,
 .task-item button:hover,
-.view-btn:hover {
+.view-btn:hover,
+.voice-btn:hover,
+#stats-btn:hover,
+#theme-toggle:hover {
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* Modal Statistik */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 320px;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+body.dark .modal-content {
+  background: #2c2c2e;
+  color: white;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.modal-header h3 {
+  margin: 0;
+}
+#close-stats {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: inherit;
+}
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.stat-item {
+  margin-bottom: 15px;
+}
+.stat-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.progress-bar {
+  height: 8px;
+  background: #e5e5ea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: #007aff;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.stat-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  margin-right: 8px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+body.dark .stat-row {
+  border-bottom-color: #444;
+}
+.stat-total {
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 15px;
 }
 
 /* Utility */
