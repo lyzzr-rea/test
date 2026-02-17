@@ -1,5 +1,5 @@
 {
-  "name": "Task Reminder App",
+  "name": "Task Reminder + Snooze",
   "short_name": "Reminders",
   "start_url": ".",
   "display": "standalone",
