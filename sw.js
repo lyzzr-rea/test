@@ -1,4 +1,4 @@
-const CACHE_NAME = "task-reminder-v2";
+const CACHE_NAME = "task-reminder-snooze-v1";
 const urlsToCache = ["./", "./index.html", "./style.css", "./script.js"];
 
 self.addEventListener("install", (e) => {
@@ -9,11 +9,13 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Menangani klik notifikasi
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const taskId = e.notification.data?.taskId;
+
   if (e.action === "snooze") {
-    // Kirim pesan ke halaman untuk membuka snooze
+    // Kirim pesan ke halaman untuk membuka modal snooze
     self.clients.matchAll().then(clients => {
       clients.forEach(client => {
         client.postMessage({ type: "SNOOZE", taskId });
