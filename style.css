@@ -358,7 +358,7 @@ body.dark #task-list-date li {
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
 }
 
-/* Modal Statistik */
+/* Modal Statistik dan Snooze */
 .modal {
   position: fixed;
   top: 0;
@@ -392,7 +392,7 @@ body.dark .modal-content {
 .modal-header h3 {
   margin: 0;
 }
-#close-stats {
+#close-stats, #close-snooze {
   background: none;
   border: none;
   font-size: 24px;
@@ -403,6 +403,8 @@ body.dark .modal-content {
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* Statistik */
 .stat-item {
   margin-bottom: 15px;
 }
@@ -449,76 +451,7 @@ body.dark .stat-row {
   margin-bottom: 15px;
 }
 
-/* Utility */
-.hidden {
-  display: none !important;
-}
-
-/* Tambahan di akhir file */
-
-.auth-section {
-  margin-bottom: 15px;
-  padding: 10px;
-  background: #f0f0f5;
-  border-radius: 12px;
-}
-
-body.dark .auth-section {
-  background: #2c2c2e;
-}
-
-#user-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#user-email {
-  font-size: 14px;
-  word-break: break-all;
-}
-
-#login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#login-form input {
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-body.dark #login-form input {
-  background: #3a3a3c;
-  color: white;
-  border-color: #555;
-}
-
-#login-form button {
-  padding: 8px;
-  border: none;
-  border-radius: 8px;
-  background: #007aff;
-  color: white;
-  cursor: pointer;
-}
-
-#login-form button:hover {
-  background: #005fcc;
-}
-
-#logout-btn {
-  background: #ff3b30;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* Snooze Modal */
+/* Snooze */
 .snooze-options {
   display: flex;
   flex-wrap: wrap;
@@ -526,7 +459,6 @@ body.dark #login-form input {
   margin-top: 15px;
   justify-content: center;
 }
-
 .snooze-options button {
   flex: 1 0 40%;
   padding: 12px;
@@ -538,14 +470,17 @@ body.dark #login-form input {
   cursor: pointer;
   transition: transform 0.2s;
 }
-
 .snooze-options button:hover {
   transform: scale(1.05);
   background: #005fcc;
 }
-
 #snooze-task-text {
   font-weight: 500;
   text-align: center;
   margin-bottom: 10px;
+}
+
+/* Utility */
+.hidden {
+  display: none !important;
 }
