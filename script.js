@@ -28,8 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentFilter = "All";
   let tasks = [];
-  let currentView = "list"; // 'list' atau 'calendar'
-  let currentMonth = new Date(); // bulan yang ditampilkan di kalender
+  let currentView = "list";
+  let currentMonth = new Date();
 
   // 🔓 Unlock audio on first click
   document.addEventListener(
@@ -125,7 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     minutesInput.value = "";
     secondsInput.value = "";
 
-    // Jika sedang di kalender, render ulang
     if (currentView === "calendar") {
       renderCalendar();
     }
@@ -286,7 +285,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const startDay = firstDay.getDay(); // 0 = Minggu
     const totalDays = lastDay.getDate();
 
-    // Tampilkan bulan dan tahun
     currentMonthSpan.textContent = currentMonth.toLocaleDateString("id-ID", {
       month: "long",
       year: "numeric",
@@ -298,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDay; i > 0; i--) {
       const day = prevMonthLastDay - i + 1;
-      const monthPrev = month; // bulan sebelumnya (masih 0-index)
+      const monthPrev = month;
       const yearPrev = month === 0 ? year - 1 : year;
       const monthPrevCorrect = month === 0 ? 11 : month - 1;
       const dateStrCorrect = `${yearPrev}-${String(monthPrevCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -321,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
       gridHTML += `<div class="${className}" data-date="${dateStr}">${d}</div>`;
     }
 
-    // Hari bulan depan untuk memenuhi 42 sel (6 baris x 7 hari)
+    // Hari bulan depan
     const nextDays = 42 - (startDay + totalDays);
     for (let i = 1; i <= nextDays; i++) {
       const day = i;
@@ -334,7 +332,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calendarGrid.innerHTML = gridHTML;
 
-    // Tambahkan event listener untuk setiap hari
     document.querySelectorAll(".calendar-day").forEach((day) => {
       day.addEventListener("click", () => {
         const dateStr = day.dataset.date;
@@ -342,7 +339,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const [y, m, d] = dateStr.split("-").map(Number);
         const selectedDate = new Date(y, m - 1, d);
 
-        // Filter task pada tanggal tersebut
         const tasksOnDate = tasks.filter((task) => {
           const taskDate = new Date(task.date);
           return (
@@ -352,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
           );
         });
 
-        // Tampilkan di area bawah
         selectedDateSpan.textContent = selectedDate.toLocaleDateString("id-ID");
         taskListDate.innerHTML = tasksOnDate
           .map(
@@ -360,7 +355,6 @@ document.addEventListener("DOMContentLoaded", () => {
           )
           .join("");
 
-        // Jika tidak ada task
         if (tasksOnDate.length === 0) {
           taskListDate.innerHTML = "<li>Tidak ada task pada tanggal ini</li>";
         }
@@ -368,7 +362,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Navigasi bulan
   prevMonthBtn.addEventListener("click", () => {
     currentMonth.setMonth(currentMonth.getMonth() - 1);
     renderCalendar();
@@ -379,21 +372,104 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCalendar();
   });
 
-  // Inisialisasi: pastikan list-view aktif, calendar-view tersembunyi
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
+
+  // ===== FUNGSI PARSING TANGGAL & WAKTU =====
+  function parseDateTimeFromText(text) {
+    const lower = text.toLowerCase();
+    const now = new Date();
+    let targetDate = null;
+    let hours = null;
+    let minutes = null;
+    let seconds = 0;
+
+    // Deteksi tanggal relatif
+    if (lower.includes('besok')) {
+      targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + 1);
+    } else if (lower.includes('lusa')) {
+      targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + 2);
+    } else if (lower.includes('hari ini')) {
+      targetDate = new Date(now);
+    } else {
+      // Deteksi tanggal dengan bulan (contoh: "25 desember")
+      const dateMatch = lower.match(/(\d{1,2})\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i);
+      if (dateMatch) {
+        const day = parseInt(dateMatch[1]);
+        const monthStr = dateMatch[2];
+        const month = {
+          januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
+          juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11
+        }[monthStr.toLowerCase()];
+        targetDate = new Date(now.getFullYear(), month, day);
+        if (targetDate < now) {
+          targetDate.setFullYear(now.getFullYear() + 1);
+        }
+      } else {
+        // Deteksi hari dalam minggu (senin, selasa, ...)
+        const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+        for (let i = 0; i < days.length; i++) {
+          if (lower.includes(days[i])) {
+            const targetDay = i;
+            const currentDay = now.getDay();
+            let diff = targetDay - currentDay;
+            if (diff <= 0) diff += 7;
+            targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + diff);
+            break;
+          }
+        }
+      }
+    }
+
+    // Jika tidak ada petunjuk tanggal, gunakan hari ini
+    if (!targetDate) {
+      targetDate = new Date(now);
+    }
+
+    // Deteksi jam dengan format "jam 3 sore", "pukul 9 pagi", dll.
+    const timeMatch = lower.match(/(?:jam|pukul)\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1]);
+      minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+
+      const modifier = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
+      if (modifier === 'pagi') {
+        if (hours === 12) hours = 0;
+      } else if (modifier === 'siang' || modifier === 'sore' || modifier === 'malam') {
+        if (hours < 12) hours += 12;
+      }
+    } else {
+      // Mungkin hanya angka dan keterangan (misal "3 sore")
+      const simpleTimeMatch = lower.match(/(\d{1,2})\s*(pagi|siang|sore|malam)/i);
+      if (simpleTimeMatch) {
+        hours = parseInt(simpleTimeMatch[1]);
+        minutes = 0;
+        const modifier = simpleTimeMatch[2].toLowerCase();
+        if (modifier === 'pagi' && hours === 12) hours = 0;
+        else if (modifier !== 'pagi' && hours < 12) hours += 12;
+      }
+    }
+
+    return {
+      date: targetDate,
+      hours: hours,
+      minutes: minutes,
+      seconds: seconds
+    };
+  }
 
   // ===== VOICE INPUT =====
   const voiceBtn = document.getElementById("voice-btn");
   let recognition = null;
   let isListening = false;
 
-  // Cek dukungan browser
   if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.lang = "id-ID"; // Bisa diganti "en-US" jika perlu
+    recognition.lang = "id-ID";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -401,7 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
     recognition.onstart = () => {
       isListening = true;
       voiceBtn.classList.add("listening");
-      voiceBtn.textContent = "⏹️"; // Ubah ikon jadi stop
+      voiceBtn.textContent = "⏹️";
     };
 
     recognition.onend = () => {
@@ -412,7 +488,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      taskInput.value = transcript; // Isi otomatis ke field tugas
+      taskInput.value = transcript; // Isi teks tugas
+
+      // Parsing tanggal dan waktu dari teks
+      const parsed = parseDateTimeFromText(transcript);
+      if (parsed.date) {
+        const year = parsed.date.getFullYear();
+        const month = String(parsed.date.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.date.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+      }
+      if (parsed.hours !== null) {
+        hoursInput.value = parsed.hours;
+      }
+      if (parsed.minutes !== null) {
+        minutesInput.value = parsed.minutes;
+      }
+      secondsInput.value = 0; // default
     };
 
     recognition.onerror = (event) => {
@@ -425,7 +517,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isListening) {
         recognition.stop();
       } else {
-        // Minta izin mikrofon (browser akan otomatis minta)
         try {
           recognition.start();
         } catch (e) {
@@ -434,7 +525,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   } else {
-    // Browser tidak mendukung
     voiceBtn.disabled = true;
     voiceBtn.title = "Browser tidak mendukung input suara";
     voiceBtn.style.opacity = 0.5;
