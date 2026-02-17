@@ -26,6 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectedDateSpan = document.getElementById("selected-date");
   const taskListDate = document.getElementById("task-list-date");
 
+  // Statistik elements
+  const statsBtn = document.getElementById("stats-btn");
+  const statsModal = document.getElementById("stats-modal");
+  const closeStats = document.getElementById("close-stats");
+  const statsBody = document.getElementById("stats-body");
+
   let currentFilter = "All";
   let tasks = [];
   let currentView = "list";
@@ -375,11 +381,107 @@ document.addEventListener("DOMContentLoaded", () => {
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
 
-  // ============================================================
-  // ========== VOICE INPUT DEEP PARSING ==========
-  // ============================================================
+  // ===== STATISTIK / RINGKASAN =====
+  function calculateStats() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.done).length;
+    const incomplete = total - completed;
+    
+    const categories = ['Tugas', 'Personal', 'Acara', 'Janjian'];
+    const categoryCount = {};
+    const categoryCompleted = {};
+    categories.forEach(cat => {
+      categoryCount[cat] = tasks.filter(t => t.category === cat).length;
+      categoryCompleted[cat] = tasks.filter(t => t.category === cat && t.done).length;
+    });
 
-  // Fungsi parsing canggih untuk teks suara
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const todayTasks = tasks.filter(t => {
+      const d = new Date(t.date);
+      d.setHours(0,0,0,0);
+      return d.getTime() === today.getTime();
+    }).length;
+    
+    const tomorrowTasks = tasks.filter(t => {
+      const d = new Date(t.date);
+      d.setHours(0,0,0,0);
+      return d.getTime() === tomorrow.getTime();
+    }).length;
+
+    return { total, completed, incomplete, categoryCount, categoryCompleted, todayTasks, tomorrowTasks };
+  }
+
+  function renderStats() {
+    const stats = calculateStats();
+    
+    let html = `
+      <div class="stat-total">
+        Total Tugas: ${stats.total}
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">
+          <span>Progress</span>
+          <span>${stats.completed} / ${stats.total} (${stats.total ? Math.round(stats.completed/stats.total*100) : 0}%)</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${stats.total ? (stats.completed/stats.total*100) : 0}%"></div>
+        </div>
+      </div>
+      <h4>Per Kategori</h4>
+    `;
+    
+    const categories = ['Tugas', 'Personal', 'Acara', 'Janjian'];
+    categories.forEach(cat => {
+      const totalCat = stats.categoryCount[cat] || 0;
+      const doneCat = stats.categoryCompleted[cat] || 0;
+      const percentage = totalCat ? Math.round(doneCat/totalCat*100) : 0;
+      
+      html += `
+        <div class="stat-row">
+          <span>
+            <span class="stat-badge ${cat}">${cat}</span>
+            ${totalCat} tugas
+          </span>
+          <span>${doneCat} selesai (${percentage}%)</span>
+        </div>
+      `;
+    });
+    
+    html += `
+      <h4>Ringkasan Waktu</h4>
+      <div class="stat-row">
+        <span>📅 Hari ini</span>
+        <span>${stats.todayTasks} tugas</span>
+      </div>
+      <div class="stat-row">
+        <span>📆 Besok</span>
+        <span>${stats.tomorrowTasks} tugas</span>
+      </div>
+    `;
+    
+    statsBody.innerHTML = html;
+  }
+
+  statsBtn.addEventListener("click", () => {
+    renderStats();
+    statsModal.classList.remove("hidden");
+  });
+
+  closeStats.addEventListener("click", () => {
+    statsModal.classList.add("hidden");
+  });
+
+  window.addEventListener("click", (e) => {
+    if (e.target === statsModal) {
+      statsModal.classList.add("hidden");
+    }
+  });
+
+  // ===== VOICE INPUT DEEP PARSING =====
   function parseAdvanced(transcript) {
     const lower = transcript.toLowerCase();
     const now = new Date();
@@ -414,7 +516,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (lower.includes('hari ini')) {
       targetDate = new Date(now);
     } else {
-      // Nama hari
       const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
       for (let i = 0; i < days.length; i++) {
         if (lower.includes(days[i])) {
@@ -427,7 +528,6 @@ document.addEventListener("DOMContentLoaded", () => {
           break;
         }
       }
-      // Tanggal + bulan (contoh: "25 desember")
       if (!targetDate) {
         const monthMap = {
           januari:0, februari:1, maret:2, april:3, mei:4, juni:5,
@@ -442,26 +542,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
-    if (!targetDate) targetDate = new Date(now); // default hari ini
+    if (!targetDate) targetDate = new Date(now);
 
-    // 3. Deteksi waktu (pola lebih canggih)
+    // 3. Deteksi waktu
     const timePatterns = [
-      // jam setengah 8   -> 07:30
       { regex: /(?:jam|pukul)?\s*setengah\s*(\d{1,2})/i, handler: (matches) => {
-          let h = parseInt(matches[1]) - 1; // setengah 8 = 7:30
+          let h = parseInt(matches[1]) - 1;
           return { h, m: 30 };
       }},
-      // jam 7 lewat 15   -> 07:15
       { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*lewat\s*(\d{1,2})/i, handler: (matches) => {
           return { h: parseInt(matches[1]), m: parseInt(matches[2]) };
       }},
-      // jam 9 kurang 10  -> 08:50
       { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*kurang\s*(\d{1,2})/i, handler: (matches) => {
           let h = parseInt(matches[1]) - 1;
           let m = 60 - parseInt(matches[2]);
           return { h, m };
       }},
-      // jam 7 pagi, jam 8 malam, dll
       { regex: /(?:jam|pukul)?\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i, handler: (matches) => {
           let h = parseInt(matches[1]);
           let m = matches[2] ? parseInt(matches[2]) : 0;
@@ -470,7 +566,6 @@ document.addEventListener("DOMContentLoaded", () => {
           else if ((modifier === 'siang' || modifier === 'sore' || modifier === 'malam') && h < 12) h += 12;
           return { h, m };
       }},
-      // hanya angka + keterangan (3 sore)
       { regex: /(\d{1,2})\s*(pagi|siang|sore|malam)/i, handler: (matches) => {
           let h = parseInt(matches[1]);
           const modifier = matches[2].toLowerCase();
@@ -500,7 +595,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Inisialisasi voice input
   const voiceBtn = document.getElementById("voice-btn");
   let recognition = null;
   let isListening = false;
@@ -527,23 +621,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      
-      // Parsing mendalam
       const parsed = parseAdvanced(transcript);
       
-      // Isi field teks
       taskInput.value = parsed.text;
       
-      // Isi kategori jika terdeteksi
       if (parsed.category) {
         const options = Array.from(categoryInput.options);
         const option = options.find(opt => opt.value === parsed.category);
-        if (option) {
-          categoryInput.value = parsed.category;
-        }
+        if (option) categoryInput.value = parsed.category;
       }
       
-      // Isi tanggal
       if (parsed.date) {
         const year = parsed.date.getFullYear();
         const month = String(parsed.date.getMonth() + 1).padStart(2, '0');
@@ -551,13 +638,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dateInput.value = `${year}-${month}-${day}`;
       }
       
-      // Isi jam & menit jika ditemukan
-      if (parsed.hours !== null) {
-        hoursInput.value = parsed.hours;
-      }
-      if (parsed.minutes !== null) {
-        minutesInput.value = parsed.minutes;
-      }
+      if (parsed.hours !== null) hoursInput.value = parsed.hours;
+      if (parsed.minutes !== null) minutesInput.value = parsed.minutes;
       secondsInput.value = 0;
     };
 
