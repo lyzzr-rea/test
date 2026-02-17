@@ -375,16 +375,36 @@ document.addEventListener("DOMContentLoaded", () => {
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
 
-  // ===== FUNGSI PARSING TANGGAL & WAKTU =====
-  function parseDateTimeFromText(text) {
-    const lower = text.toLowerCase();
+  // ============================================================
+  // ========== VOICE INPUT DEEP PARSING ==========
+  // ============================================================
+
+  // Fungsi parsing canggih untuk teks suara
+  function parseAdvanced(transcript) {
+    const lower = transcript.toLowerCase();
     const now = new Date();
     let targetDate = null;
     let hours = null;
-    let minutes = null;
+    let minutes = 0;
     let seconds = 0;
+    let detectedCategory = null;
 
-    // Deteksi tanggal relatif
+    // 1. Deteksi kategori
+    const categoryKeywords = {
+      Tugas: ['tugas', 'pr', 'belajar', 'ujian', 'kuis', 'mengerjakan'],
+      Personal: ['pribadi', 'olahraga', 'gym', 'meditasi', 'baca', 'tidur'],
+      Acara: ['acara', 'event', 'konser', 'pesta', 'ulang tahun', 'pernikahan'],
+      Janjian: ['janji', 'janjian', 'ketemu', 'meeting', 'temu', 'kopdar', 'date']
+    };
+
+    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(kw => lower.includes(kw))) {
+        detectedCategory = cat;
+        break;
+      }
+    }
+
+    // 2. Deteksi tanggal
     if (lower.includes('besok')) {
       targetDate = new Date(now);
       targetDate.setDate(now.getDate() + 1);
@@ -394,74 +414,93 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (lower.includes('hari ini')) {
       targetDate = new Date(now);
     } else {
-      // Deteksi tanggal dengan bulan (contoh: "25 desember")
-      const dateMatch = lower.match(/(\d{1,2})\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i);
-      if (dateMatch) {
-        const day = parseInt(dateMatch[1]);
-        const monthStr = dateMatch[2];
-        const month = {
-          januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
-          juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11
-        }[monthStr.toLowerCase()];
-        targetDate = new Date(now.getFullYear(), month, day);
-        if (targetDate < now) {
-          targetDate.setFullYear(now.getFullYear() + 1);
+      // Nama hari
+      const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+      for (let i = 0; i < days.length; i++) {
+        if (lower.includes(days[i])) {
+          const targetDay = i;
+          const currentDay = now.getDay();
+          let diff = targetDay - currentDay;
+          if (diff <= 0) diff += 7;
+          targetDate = new Date(now);
+          targetDate.setDate(now.getDate() + diff);
+          break;
         }
-      } else {
-        // Deteksi hari dalam minggu (senin, selasa, ...)
-        const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-        for (let i = 0; i < days.length; i++) {
-          if (lower.includes(days[i])) {
-            const targetDay = i;
-            const currentDay = now.getDay();
-            let diff = targetDay - currentDay;
-            if (diff <= 0) diff += 7;
-            targetDate = new Date(now);
-            targetDate.setDate(now.getDate() + diff);
-            break;
-          }
+      }
+      // Tanggal + bulan (contoh: "25 desember")
+      if (!targetDate) {
+        const monthMap = {
+          januari:0, februari:1, maret:2, april:3, mei:4, juni:5,
+          juli:6, agustus:7, september:8, oktober:9, november:10, desember:11
+        };
+        const dateMatch = lower.match(/(\d{1,2})\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i);
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1]);
+          const month = monthMap[dateMatch[2].toLowerCase()];
+          targetDate = new Date(now.getFullYear(), month, day);
+          if (targetDate < now) targetDate.setFullYear(now.getFullYear() + 1);
         }
       }
     }
+    if (!targetDate) targetDate = new Date(now); // default hari ini
 
-    // Jika tidak ada petunjuk tanggal, gunakan hari ini
-    if (!targetDate) {
-      targetDate = new Date(now);
-    }
+    // 3. Deteksi waktu (pola lebih canggih)
+    const timePatterns = [
+      // jam setengah 8   -> 07:30
+      { regex: /(?:jam|pukul)?\s*setengah\s*(\d{1,2})/i, handler: (matches) => {
+          let h = parseInt(matches[1]) - 1; // setengah 8 = 7:30
+          return { h, m: 30 };
+      }},
+      // jam 7 lewat 15   -> 07:15
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*lewat\s*(\d{1,2})/i, handler: (matches) => {
+          return { h: parseInt(matches[1]), m: parseInt(matches[2]) };
+      }},
+      // jam 9 kurang 10  -> 08:50
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*kurang\s*(\d{1,2})/i, handler: (matches) => {
+          let h = parseInt(matches[1]) - 1;
+          let m = 60 - parseInt(matches[2]);
+          return { h, m };
+      }},
+      // jam 7 pagi, jam 8 malam, dll
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i, handler: (matches) => {
+          let h = parseInt(matches[1]);
+          let m = matches[2] ? parseInt(matches[2]) : 0;
+          const modifier = matches[3] ? matches[3].toLowerCase() : '';
+          if (modifier === 'pagi' && h === 12) h = 0;
+          else if ((modifier === 'siang' || modifier === 'sore' || modifier === 'malam') && h < 12) h += 12;
+          return { h, m };
+      }},
+      // hanya angka + keterangan (3 sore)
+      { regex: /(\d{1,2})\s*(pagi|siang|sore|malam)/i, handler: (matches) => {
+          let h = parseInt(matches[1]);
+          const modifier = matches[2].toLowerCase();
+          if (modifier === 'pagi' && h === 12) h = 0;
+          else if (modifier !== 'pagi' && h < 12) h += 12;
+          return { h, m: 0 };
+      }}
+    ];
 
-    // Deteksi jam dengan format "jam 3 sore", "pukul 9 pagi", dll.
-    const timeMatch = lower.match(/(?:jam|pukul)\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i);
-    if (timeMatch) {
-      hours = parseInt(timeMatch[1]);
-      minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-
-      const modifier = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
-      if (modifier === 'pagi') {
-        if (hours === 12) hours = 0;
-      } else if (modifier === 'siang' || modifier === 'sore' || modifier === 'malam') {
-        if (hours < 12) hours += 12;
-      }
-    } else {
-      // Mungkin hanya angka dan keterangan (misal "3 sore")
-      const simpleTimeMatch = lower.match(/(\d{1,2})\s*(pagi|siang|sore|malam)/i);
-      if (simpleTimeMatch) {
-        hours = parseInt(simpleTimeMatch[1]);
-        minutes = 0;
-        const modifier = simpleTimeMatch[2].toLowerCase();
-        if (modifier === 'pagi' && hours === 12) hours = 0;
-        else if (modifier !== 'pagi' && hours < 12) hours += 12;
+    for (let pattern of timePatterns) {
+      const match = lower.match(pattern.regex);
+      if (match) {
+        const result = pattern.handler(match);
+        hours = result.h;
+        minutes = result.m;
+        break;
       }
     }
 
     return {
+      text: transcript,
+      category: detectedCategory,
       date: targetDate,
       hours: hours,
       minutes: minutes,
-      seconds: seconds
+      seconds: 0
     };
   }
 
-  // ===== VOICE INPUT =====
+  // Inisialisasi voice input
   const voiceBtn = document.getElementById("voice-btn");
   let recognition = null;
   let isListening = false;
@@ -488,23 +527,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      taskInput.value = transcript; // Isi teks tugas
-
-      // Parsing tanggal dan waktu dari teks
-      const parsed = parseDateTimeFromText(transcript);
+      
+      // Parsing mendalam
+      const parsed = parseAdvanced(transcript);
+      
+      // Isi field teks
+      taskInput.value = parsed.text;
+      
+      // Isi kategori jika terdeteksi
+      if (parsed.category) {
+        const options = Array.from(categoryInput.options);
+        const option = options.find(opt => opt.value === parsed.category);
+        if (option) {
+          categoryInput.value = parsed.category;
+        }
+      }
+      
+      // Isi tanggal
       if (parsed.date) {
         const year = parsed.date.getFullYear();
         const month = String(parsed.date.getMonth() + 1).padStart(2, '0');
         const day = String(parsed.date.getDate()).padStart(2, '0');
         dateInput.value = `${year}-${month}-${day}`;
       }
+      
+      // Isi jam & menit jika ditemukan
       if (parsed.hours !== null) {
         hoursInput.value = parsed.hours;
       }
       if (parsed.minutes !== null) {
         minutesInput.value = parsed.minutes;
       }
-      secondsInput.value = 0; // default
+      secondsInput.value = 0;
     };
 
     recognition.onerror = (event) => {
